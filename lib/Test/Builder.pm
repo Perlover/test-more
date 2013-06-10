@@ -13,6 +13,11 @@ BEGIN {
     }
 }
 
+sub logging ($) {
+    open my $fh, '>>:utf8', '/tmp/test-more.txt';
+    print $fh "pid [ ", $$, " ] ", shift, "\n";
+}
+
 
 # Make Test::Builder thread-safe for ithreads.
 BEGIN {
@@ -184,7 +189,7 @@ sub child {
 
     # Add to our indentation
     $child->_indent( $self->_indent . '    ' );
-    
+
     $child->{$_} = $self->{$_} foreach qw{Out_FH Todo_FH Fail_FH};
     if ($parent_in_todo) {
         $child->{Fail_FH} = $self->{Todo_FH};
@@ -761,8 +766,10 @@ like Test::Simple's C<ok()>.
 =cut
 
 sub ok {
+    logging "p_1_a";
     my( $self, $test, $name ) = @_;
 
+    logging "p_1";
     if ( $self->{Child_Name} and not $self->{In_Destroy} ) {
         $name = 'unnamed test' unless defined $name;
         $self->is_passing(0);
@@ -775,6 +782,7 @@ sub ok {
     lock $self->{Curr_Test};
     $self->{Curr_Test}++;
 
+    logging "p_2";
     # In case $name is a string overloaded object, force it to stringify.
     $self->_unoverload_str( \$name );
 
@@ -789,6 +797,7 @@ ERR
     my $in_todo = $self->in_todo;
     local $self->{Todo} = $todo if $in_todo;
 
+    logging "p_3";
     $self->_unoverload_str( \$todo );
 
     my $out;
@@ -814,6 +823,7 @@ ERR
         $result->{name} = '';
     }
 
+    logging "p_4";
     if( $self->in_todo ) {
         $out .= " # TODO $todo";
         $result->{reason} = $todo;
@@ -827,8 +837,10 @@ ERR
     $self->{Test_Results}[ $self->{Curr_Test} - 1 ] = $result;
     $out .= "\n";
 
+    logging "p_5";
     $self->_print($out);
 
+    logging "p_6";
     unless($test) {
         my $msg = $self->in_todo ? "Failed (TODO)" : "Failed";
         $self->_print_to_fh( $self->_diag_fh, "\n" ) if $ENV{HARNESS_ACTIVE};
@@ -843,11 +855,14 @@ ERR
         }
     }
 
+    logging "p_7";
     $self->is_passing(0) unless $test || $self->in_todo;
 
+    logging "p_8";
     # Check that we haven't violated the plan
     $self->_check_is_passing_plan();
 
+    logging "p_9";
     return $test ? 1 : 0;
 }
 
@@ -2073,7 +2088,7 @@ sub summary {
 
 Like C<summary()>, but with a lot more detail.
 
-    $tests[$test_num - 1] = 
+    $tests[$test_num - 1] =
             { 'ok'       => is the test considered a pass?
               actual_ok  => did it literally say 'ok'?
               name       => name of the test (if any)
@@ -2574,4 +2589,3 @@ See F<http://www.perl.com/perl/misc/Artistic.html>
 =cut
 
 1;
-
